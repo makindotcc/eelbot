@@ -1,18 +1,36 @@
 package main
 
-import "io"
-import "bufio"
-import "encoding/binary"
-import "bytes"
+import (
+	"bufio"
+	"bytes"
+	"encoding/binary"
+	"io"
+)
 
-func writePacketBuf(writer *bufio.Writer, buf *bytes.Buffer) (err error) {
+func writePacketBuf(writer *bufio.Writer, buf *bytes.Buffer, threshold int32) (err error) {
 	defer buf.Reset()
 	b := buf.Bytes()
-	if err = writeVarInt(writer, int32(len(b))); err != nil {
-		return
-	}
-	if _, err = writer.Write(b); err != nil {
-		return
+
+	if threshold >= 0 {
+		uncompressedLen := int32(buf.Len())
+		// compressed length varint length (1) + compressed length
+		if err = writeVarInt(writer, 1+uncompressedLen); err != nil {
+			return
+		}
+		// compressed length
+		if err = writeVarInt(writer, 0); err != nil {
+			return
+		}
+		if _, err = writer.Write(buf.Bytes()); err != nil {
+			return
+		}
+	} else {
+		if err = writeVarInt(writer, int32(len(b))); err != nil {
+			return
+		}
+		if _, err = writer.Write(b); err != nil {
+			return
+		}
 	}
 	err = writer.Flush()
 	return
@@ -55,6 +73,15 @@ func writeVarInt(writer io.Writer, c int32) (err error) {
 		c >>= 7
 	}
 	writeUnsignedByte(writer, byte(c))
+	return
+}
+
+func varIntSize(c int32) (size int32) {
+	for c >= 0x80 {
+		size++
+		c >>= 7
+	}
+	size++
 	return
 }
 

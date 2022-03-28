@@ -4,9 +4,14 @@ import "fmt"
 import "io"
 import "encoding/binary"
 
-func readHeader(reader io.Reader) (id int32, err error) {
+func readHeader(reader io.Reader, threshold int32) (id int32, err error) {
 	if _, err = readVarInt(reader); err != nil {
 		return
+	}
+	if threshold >= 0 {
+		if _, err = readVarInt(reader); err != nil {
+			return
+		}
 	}
 	return readVarInt(reader)
 }

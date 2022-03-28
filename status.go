@@ -1,9 +1,11 @@
 package main
 
-import "bufio"
-import "fmt"
-import "net"
-import "bytes"
+import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"net"
+)
 
 const STATUS_RESPONSE = `{
 	"version": {
@@ -19,7 +21,7 @@ const STATUS_RESPONSE = `{
 
 func handleStatus(conn net.Conn, reader *bufio.Reader, writer *bufio.Writer, protocol int32, max int) {
 	// C->S 0x00 Status request
-	id, err := readHeader(reader)
+	id, err := readHeader(reader, -1)
 	if err != nil {
 		conn.Close()
 		return
@@ -34,13 +36,13 @@ func handleStatus(conn net.Conn, reader *bufio.Reader, writer *bufio.Writer, pro
 	// S->C Status response
 	writeVarInt(packetbuf, 0x00)
 	writeVarString(packetbuf, fmt.Sprintf(STATUS_RESPONSE, protocol, max, max))
-	if err = writePacketBuf(writer, packetbuf); err != nil {
+	if err = writePacketBuf(writer, packetbuf, -1); err != nil {
 		conn.Close()
 		return
 	}
 
 	// C->S 0x00 Ping
-	id, err = readHeader(reader)
+	id, err = readHeader(reader, -1)
 	if err != nil {
 		conn.Close()
 		return
@@ -58,7 +60,7 @@ func handleStatus(conn net.Conn, reader *bufio.Reader, writer *bufio.Writer, pro
 	// S->C Ping
 	writeVarInt(packetbuf, 0x01)
 	writeLong(packetbuf, ping)
-	if err = writePacketBuf(writer, packetbuf); err != nil {
+	if err = writePacketBuf(writer, packetbuf, -1); err != nil {
 		conn.Close()
 		return
 	}
